@@ -8,6 +8,7 @@ import java.time.LocalDate;
 @Data
 public class OfferTO implements Serializable {
 
+    private Long version;
     private LocalDate createdAt;
     private LocalDate updatedAt;
     private Long id;
