@@ -18,24 +18,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Get latest tag and bump version
+        id: version
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+          LATEST_TAG=${LATEST_TAG#v}  # Remove 'v' prefix if exists
+          
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST_TAG"
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          
+          echo "new_tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: Determine version bump
-        id: bump
-        uses: anothrNick/github-tag-action@1.67.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: false
-          DEFAULT_BUMP: patch
-          FORCE_TAG: true
-
       - name: Set Maven version
         run: |
-          mvn versions:set -DnewVersion=${{ steps.bump.outputs.new_tag }}
+          mvn versions:set -DnewVersion=${{ steps.version.outputs.new_tag }}
           mvn versions:commit
 
       - name: Deploy to GitHub Packages
@@ -43,7 +47,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create tag and release
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a ${{ steps.version.outputs.new_tag }} -m "Release ${{ steps.version.outputs.new_tag }}"
+          git push origin ${{ steps.version.outputs.new_tag }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.bump.outputs.new_tag }}
+          tag_name: ${{ steps.version.outputs.new_tag }}
