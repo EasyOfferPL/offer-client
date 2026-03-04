@@ -31,6 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: false
           DEFAULT_BUMP: patch
+          FORCE_TAG: true
 
       - name: Set Maven version
         run: |
